@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "159908951330",
+    "project_id": "studyora-plan",
+    "storage_bucket": "studyora-plan.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:159908951330:android:cfeb0f03b8df55624e617b",
+        "android_client_info": {
+          "package_name": "com.example.studyora"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpXcwTGLCG0Hy4LthQmFk2IYrse1Mwhto"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
