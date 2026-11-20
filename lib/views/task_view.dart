@@ -11,11 +11,12 @@ class TaskView extends StatefulWidget {
 
 class _TaskViewState extends State<TaskView> {
   final AppController _controller = AppController();
+  String _selectedCourseFilter = 'Semua';
 
   void _showAddTaskModal(BuildContext context, {TaskModel? taskToEdit}) {
     final titleController = TextEditingController(text: taskToEdit?.title ?? '');
     final notesController = TextEditingController(text: taskToEdit?.notes ?? '');
-    
+
     String? selectedCourse = taskToEdit?.course;
     if (selectedCourse == null && _controller.courses.isNotEmpty) {
       selectedCourse = _controller.courses.first.courseName;
@@ -64,7 +65,7 @@ class _TaskViewState extends State<TaskView> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Input Judul Tugas
                     TextField(
                       controller: titleController,
@@ -174,7 +175,6 @@ class _TaskViewState extends State<TaskView> {
                         onPressed: () async {
                           if (titleController.text.isNotEmpty) {
                             if (isEditing) {
-                              // Jika sedang mode edit, hapus data lama lalu buat baru atau update
                               await _controller.deleteTask(taskToEdit.id);
                               await _controller.addTaskData(
                                 title: titleController.text,
@@ -214,6 +214,20 @@ class _TaskViewState extends State<TaskView> {
 
   @override
   Widget build(BuildContext context) {
+    final Set<String> uniqueCourses = {
+      ..._controller.courses.map((c) => c.courseName).where((name) => name.trim().isNotEmpty),
+      ..._controller.tasksList.map((t) => t.course).where((name) => name.trim().isNotEmpty),
+    };
+    final List<String> filterOptions = ['Semua', ...uniqueCourses];
+
+    if (!filterOptions.contains(_selectedCourseFilter)) {
+      _selectedCourseFilter = 'Semua';
+    }
+
+    final List<TaskModel> filteredTasks = _selectedCourseFilter == 'Semua'
+        ? _controller.tasksList
+        : _controller.tasksList.where((t) => t.course == _selectedCourseFilter).toList();
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -222,109 +236,154 @@ class _TaskViewState extends State<TaskView> {
         elevation: 0,
         foregroundColor: Colors.black87,
       ),
-      body: _controller.tasksList.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.task_alt, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Belum ada tugas. Yuk tambah tugasmu! ✨',
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
-                  ),
-                ],
+      body: Column(
+        children: [
+          if (_controller.tasksList.isNotEmpty || filterOptions.length > 1)
+            SizedBox(
+              height: 48,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                scrollDirection: Axis.horizontal,
+                itemCount: filterOptions.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final String option = filterOptions[index];
+                  final bool isSelected = _selectedCourseFilter == option;
+                  return ChoiceChip(
+                    label: Text(option),
+                    selected: isSelected,
+                    selectedColor: Colors.deepPurple,
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(
+                        color: isSelected ? Colors.deepPurple : Colors.grey.shade300,
+                      ),
+                    ),
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedCourseFilter = option;
+                      });
+                    },
+                  );
+                },
               ),
-            )
-          : ListView.builder(
-              itemCount: _controller.tasksList.length,
-              itemBuilder: (context, index) {
-                final TaskModel task = _controller.tasksList[index];
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withValues(alpha: 0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        value: task.isCompleted,
-                        activeColor: Colors.deepPurple,
-                        onChanged: (bool? value) async {
-                          await _controller.updateTaskStatus(task.id, value ?? false);
-                          setState(() {});
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              task.title,
-                              style: TextStyle(
-                                fontSize: 16,
-                                decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                                fontWeight: FontWeight.bold,
-                                color: task.isCompleted ? Colors.grey : Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.book, size: 14, color: Colors.deepPurple),
-                                const SizedBox(width: 4),
-                                Text(
-                                  task.course,
-                                  style: const TextStyle(fontSize: 12, color: Colors.deepPurple, fontWeight: FontWeight.w500),
-                                ),
-                              ],
-                            ),
-                            if (task.notes.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                'Catatan: ${task.notes}',
-                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                              ),
-                            ],
-                            const SizedBox(height: 2),
-                            Text(
-                              'Deadline: ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}',
-                              style: const TextStyle(fontSize: 11, color: Colors.orangeAccent, fontWeight: FontWeight.w500),
+            ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: filteredTasks.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.task_alt, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 12),
+                        Text(
+                          _controller.tasksList.isEmpty
+                              ? 'Belum ada tugas. Yuk tambah tugasmu! ✨'
+                              : 'Tidak ada tugas untuk mata kuliah "$_selectedCourseFilter".',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.grey, fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: filteredTasks.length,
+                    itemBuilder: (context, index) {
+                      final TaskModel task = filteredTasks[index];
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withValues(alpha: 0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                      ),
-                      // Tombol Edit
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent, size: 22),
-                        onPressed: () {
-                          _showAddTaskModal(context, taskToEdit: task);
-                        },
-                      ),
-                      // Tombol Hapus
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
-                        onPressed: () async {
-                          await _controller.deleteTask(task.id);
-                          setState(() {});
-                        },
-                      ),
-                    ],
+                        child: Row(
+                          children: [
+                            Checkbox(
+                              value: task.isCompleted,
+                              activeColor: Colors.deepPurple,
+                              onChanged: (bool? value) async {
+                                await _controller.updateTaskStatus(task.id, value ?? false);
+                                setState(() {});
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    task.title,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                                      fontWeight: FontWeight.bold,
+                                      color: task.isCompleted ? Colors.grey : Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.book, size: 14, color: Colors.deepPurple),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        task.course,
+                                        style: const TextStyle(fontSize: 12, color: Colors.deepPurple, fontWeight: FontWeight.w500),
+                                      ),
+                                    ],
+                                  ),
+                                  if (task.notes.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Catatan: ${task.notes}',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Deadline: ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}',
+                                    style: const TextStyle(fontSize: 11, color: Colors.orangeAccent, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Tombol Edit
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, color: Colors.blueAccent, size: 22),
+                              onPressed: () {
+                                _showAddTaskModal(context, taskToEdit: task);
+                              },
+                            ),
+                            // Tombol Hapus
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
+                              onPressed: () async {
+                                await _controller.deleteTask(task.id);
+                                setState(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                );
-                
-              },
-            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.deepPurple,
         onPressed: () => _showAddTaskModal(context),

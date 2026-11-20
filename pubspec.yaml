@@ -40,7 +40,6 @@ dependencies:
   firebase_core: ^3.0.0
   firebase_auth: ^5.0.0
   cloud_firestore: ^5.0.0
-  flutter_local_notifications: ^17.2.1 # atau versi terbaru yang kompatibel
   timezone: ^0.9.4
 
 dev_dependencies:

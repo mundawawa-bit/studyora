@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart'; // Import package grafik
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../controllers/app_controller.dart';
+import '../services/firestore_service.dart';
 
 class ReportView extends StatefulWidget {
   const ReportView({super.key});
@@ -11,12 +14,32 @@ class ReportView extends StatefulWidget {
 
 class _ReportViewState extends State<ReportView> {
   final AppController _controller = AppController();
+  final FirestoreService _firestoreService = FirestoreService();
+  StreamSubscription? _plannerSub;
   late String selectedMonthKey;
 
   @override
   void initState() {
     super.initState();
     selectedMonthKey = _controller.availableMonths.first;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      _plannerSub = _firestoreService.getPlanners(uid).listen((_) {
+        if (mounted) {
+          setState(() {
+            if (!_controller.availableMonths.contains(selectedMonthKey)) {
+              selectedMonthKey = _controller.availableMonths.first;
+            }
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _plannerSub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -130,7 +153,7 @@ class _ReportViewState extends State<ReportView> {
             ),
             const SizedBox(height: 20),
 
-            // 💡 MENU EVALUASI BELAJAR
+            // MENU EVALUASI BELAJAR
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -200,7 +223,7 @@ class _ReportViewState extends State<ReportView> {
             ),
             const SizedBox(height: 24),
 
-            // 📊 VISUALISASI GRAFIK BATANG: STATISTIK JAM BELAJAR PER MINGGU
+            // VISUALISASI GRAFIK BATANG: STATISTIK JAM BELAJAR PER MINGGU
             const Text('Statistik Jam Belajar per Minggu', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D2E4A))),
             const SizedBox(height: 12),
             Container(
@@ -235,13 +258,13 @@ class _ReportViewState extends State<ReportView> {
                   barGroups: weeklyBreakdown.values.toList().asMap().entries.map((entry) {
                     int index = entry.key;
                     int minutes = entry.value;
-                    double hours = minutes / 60.0; // Ubah menit ke jam untuk grafik
+                    double hours = minutes / 60.0;
 
                     return BarChartGroupData(
                       x: index,
                       barRods: [
                         BarChartRodData(
-                          toY: hours > 0 ? hours : 0.2, // Minimal tinggi batang agar tetap terlihat
+                          toY: hours > 0 ? hours : 0.2,
                           color: const Color(0xFF8C72EC),
                           width: 22,
                           borderRadius: BorderRadius.circular(8),
@@ -258,6 +281,7 @@ class _ReportViewState extends State<ReportView> {
               ),
             ),
             const SizedBox(height: 12),
+
             // Keterangan Label Grafik W1-W4
             Container(
               padding: const EdgeInsets.all(14),
@@ -279,7 +303,7 @@ class _ReportViewState extends State<ReportView> {
             ),
             const SizedBox(height: 24),
 
-            // 📅 RINCIAN HARIAN
+            // RINCIAN HARIAN
             const Text('Total waktu belajar hari ini', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D2E4A))),
             const SizedBox(height: 12),
             if (dailyMinutes.isEmpty)
@@ -323,7 +347,7 @@ class _ReportViewState extends State<ReportView> {
       if (val > maxMins) maxMins = val.toDouble();
     }
     double maxHours = (maxMins / 60.0);
-    return maxHours < 5 ? 5.0 : maxHours + 2; // Batas minimal sumbu Y grafik adalah 5 jam
+    return maxHours < 5 ? 5.0 : maxHours + 2;
   }
 
   Widget _buildMetricCard(String title, String count, Color bg, Color textColor) {

@@ -8,14 +8,12 @@ import 'views/task_view.dart';
 import 'views/study_planner_view.dart';
 import 'views/report_view.dart';
 import 'services/auth_service.dart';
-import 'services/notification_service.dart'; // Import service notifikasi
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await NotificationService().initNotification();
   runApp(const MyApp());
 }
 

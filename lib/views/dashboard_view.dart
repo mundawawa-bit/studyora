@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../controllers/app_controller.dart';
 import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 import 'login_view.dart';
 
 class DashboardView extends StatefulWidget {
@@ -13,13 +16,43 @@ class DashboardView extends StatefulWidget {
 class _DashboardViewState extends State<DashboardView> {
   final AppController _controller = AppController();
   final AuthService _authService = AuthService();
+  final FirestoreService _firestoreService = FirestoreService();
+
+  StreamSubscription? _plannerSub;
+  StreamSubscription? _taskSub;
+  StreamSubscription? _courseSub;
+
+  @override
+  void initState() {
+    super.initState();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      _plannerSub = _firestoreService.getPlanners(uid).listen((_) {
+        if (mounted) setState(() {});
+      });
+      _taskSub = _firestoreService.getTasks(uid).listen((_) {
+        if (mounted) setState(() {});
+      });
+      _courseSub = _firestoreService.getCourses(uid).listen((_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _plannerSub?.cancel();
+    _taskSub?.cancel();
+    _courseSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     int totalMatkul = _controller.totalCourses;
-    int activePlanners = _controller.uncompletedPlanners; 
-    int activeTasks = _controller.activeTasksCount;        
-    
+    int activePlanners = _controller.uncompletedPlanners;
+    int activeTasks = _controller.activeTasksCount;
+
     int totalPlan = _controller.totalPlanners;
     int completedPlan = _controller.completedPlanners;
     double planProgress = totalPlan > 0 ? (completedPlan / totalPlan) : 0.0;
@@ -29,7 +62,7 @@ class _DashboardViewState extends State<DashboardView> {
     double taskProgress = totalTask > 0 ? (completedTask / totalTask) : 0.0;
 
     String weeklyStudyTime = _controller.weeklyStudyTimeText;
-    final todayPlans = _controller.todayPlanners; 
+    final todayPlans = _controller.todayPlanners;
     final upcomingTasks = _controller.tasksList.where((t) => t.isCompleted == false).toList();
 
     return Scaffold(
@@ -84,7 +117,7 @@ class _DashboardViewState extends State<DashboardView> {
               ),
               const SizedBox(height: 20),
 
-              // ⏱️ CARD TOTAL WAKTU BELAJAR BULAN INI
+              // CARD TOTAL WAKTU BELAJAR BULAN INI
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
@@ -118,10 +151,10 @@ class _DashboardViewState extends State<DashboardView> {
               ),
               const SizedBox(height: 24),
 
-              // 📊 DUA PROGRESS BAR
+              // DUA PROGRESS BAR
               const Text('Progress', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D2E4A))),
               const SizedBox(height: 12),
-              
+
               // Progress 1: Study Plan
               Container(
                 padding: const EdgeInsets.all(16),
@@ -192,7 +225,7 @@ class _DashboardViewState extends State<DashboardView> {
               ),
               const SizedBox(height: 24),
 
-              // 🔔 PENGINGAT PLAN HARIAN
+              // PENGINGAT PLAN HARIAN
               const Text('Plan Hari Ini', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D2E4A))),
               const SizedBox(height: 12),
               if (todayPlans.isEmpty)

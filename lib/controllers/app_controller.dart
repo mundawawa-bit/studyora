@@ -4,7 +4,6 @@ import '../models/course_model.dart';
 import '../models/task_model.dart';
 import '../models/planner_model.dart';
 import '../services/firestore_service.dart';
-import '../services/notification_service.dart';
 
 class AppController {
   static final AppController _instance = AppController._internal();
@@ -85,7 +84,7 @@ class AppController {
   int get totalCourses => courses.length;
   int get totalTasks => tasksList.length;
   int get completedTasks => tasksList.where((t) => t.isCompleted == true).length;
-  
+
   int get activeTasksCount {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -145,6 +144,14 @@ class AppController {
     required String plannerType,
   }) async {
     if (_uid == null) return;
+
+    int startTotalMinutes = startTime.hour * 60 + startTime.minute;
+    int endTotalMinutes = endTime.hour * 60 + endTime.minute;
+    int calculatedDuration = endTotalMinutes - startTotalMinutes;
+    if (calculatedDuration <= 0) {
+      calculatedDuration = 60;
+    }
+
     await _firestoreService.addPlanner(_uid!, {
       'title': title,
       'courseName': courseName,
@@ -156,7 +163,7 @@ class AppController {
       'endTimeMinute': endTime.minute,
       'plannerType': plannerType,
       'isCompleted': false,
-      'durationInMinutes': 60,
+      'durationInMinutes': calculatedDuration,
     });
   }
 
@@ -166,7 +173,13 @@ class AppController {
     if (index != -1) {
       final plan = planners[index];
       bool newStatus = !plan.isCompleted;
-      int newDuration = newStatus ? 60 : 0;
+      int startMins = plan.startTime.hour * 60 + plan.startTime.minute;
+      int endMins = plan.endTime.hour * 60 + plan.endTime.minute;
+      int diffFromTime = endMins - startMins;
+      int planDuration = diffFromTime > 0
+          ? diffFromTime
+          : (plan.durationInMinutes > 0 ? plan.durationInMinutes : 60);
+      int newDuration = newStatus ? planDuration : 0;
       await _firestoreService.updatePlannerCompletion(_uid!, id, newStatus, newDuration);
     }
   }
@@ -186,17 +199,6 @@ class AppController {
       'dueDate': dueDate.toIso8601String(),
       'isCompleted': false,
     });
-
-    // Otomatis jadwalkan notifikasi pada hari H deadline pukul 08:00 pagi
-    final reminderTime = DateTime(dueDate.year, dueDate.month, dueDate.day, 8, 0);
-    if (reminderTime.isAfter(DateTime.now())) {
-      NotificationService().scheduleNotification(
-        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        title: 'Deadline Tugas: $title 📚',
-        body: 'Waktunya kumpulkan tugas mata kuliah $course hari ini!',
-        scheduledDate: reminderTime,
-      );
-    }
   }
 
   Future<void> updateTaskStatus(String id, bool isCompleted) async {
@@ -226,7 +228,7 @@ class AppController {
     }
     String currentMonthKey = '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}';
     months.add(currentMonthKey);
-    
+
     List<String> sortedMonths = months.toList();
     sortedMonths.sort((a, b) => b.compareTo(a));
     return sortedMonths;

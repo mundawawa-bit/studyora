@@ -12,21 +12,20 @@ class StudyPlannerView extends StatefulWidget {
 
 class _StudyPlannerViewState extends State<StudyPlannerView> {
   final AppController _controller = AppController();
-  
+
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
   CalendarFormat _calendarFormat = CalendarFormat.week;
 
-  // Fungsi untuk mengambil daftar plan berdasarkan tanggal tertentu (untuk marker kalender)
   List<dynamic> _getEventsForDay(DateTime day) {
     final plans = _controller.planners.where((p) {
       return p.dueDate.year == day.year &&
-             p.dueDate.month == day.month &&
-             p.dueDate.day == day.day;
+          p.dueDate.month == day.month &&
+          p.dueDate.day == day.day;
     }).toList();
 
     if (plans.isNotEmpty) {
-      return [true]; // Mengembalikan list berisi 1 elemen agar terdeteksi ada event
+      return [true];
     }
     return [];
   }
@@ -34,12 +33,14 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
   void _showAddPlannerModal(BuildContext context) {
     final titleController = TextEditingController();
     final notesController = TextEditingController();
-    
-    String? selectedCourse = _controller.courses.isNotEmpty ? _controller.courses.first.courseName : 'Belajar Mandiri / Luar Matkul';
+
+    String? selectedCourse = _controller.courses.isNotEmpty
+        ? _controller.courses.first.courseName
+        : 'Belajar Mandiri / Luar Matkul';
     DateTime selectedDate = _selectedDay;
     TimeOfDay startTime = const TimeOfDay(hour: 9, minute: 0);
     TimeOfDay endTime = const TimeOfDay(hour: 10, minute: 30);
-    String plannerType = 'Daily';
+    const String plannerType = 'Daily';
 
     showModalBottomSheet(
       context: context,
@@ -83,7 +84,6 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
                     ),
                     const SizedBox(height: 20),
 
-                    // 1. Input Aktivitas Belajar (Judul Plan)
                     const Text('Aktivitas Belajar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF8C8CA1))),
                     const SizedBox(height: 8),
                     TextField(
@@ -98,7 +98,6 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
                     ),
                     const SizedBox(height: 16),
 
-                    // 2. Dropdown Mata Kuliah
                     const Text('Pilih Mata Kuliah (Opsi)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF8C8CA1))),
                     const SizedBox(height: 8),
                     Container(
@@ -132,7 +131,6 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
                     ),
                     const SizedBox(height: 16),
 
-                    // 3. Catatan / Keterangan
                     const Text('Catatan / Keterangan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF8C8CA1))),
                     const SizedBox(height: 8),
                     TextField(
@@ -148,7 +146,6 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
                     ),
                     const SizedBox(height: 16),
 
-                    // 4. Pilih Tanggal
                     InkWell(
                       onTap: () async {
                         DateTime? picked = await showDatePicker(
@@ -181,7 +178,6 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
                     ),
                     const SizedBox(height: 16),
 
-                    // 5. Jam Mulai & Jam Selesai
                     Row(
                       children: [
                         Expanded(
@@ -251,7 +247,6 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
                     ),
                     const SizedBox(height: 24),
 
-                    // 6. Tombol Kunci & Simpan Plan
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF8C72EC),
@@ -259,9 +254,9 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         elevation: 0,
                       ),
-                      onPressed: () {
+                      onPressed: () async {
                         if (titleController.text.isNotEmpty) {
-                          _controller.addPlanner(
+                          await _controller.addPlanner(
                             title: titleController.text,
                             courseName: selectedCourse == 'Belajar Mandiri / Luar Matkul' ? null : selectedCourse,
                             notes: notesController.text,
@@ -270,6 +265,7 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
                             endTime: endTime,
                             plannerType: plannerType,
                           );
+                          if (!context.mounted) return;
                           setState(() {});
                           Navigator.pop(context);
                         }
@@ -299,11 +295,10 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
 
   @override
   Widget build(BuildContext context) {
-    // Mengambil daftar plan sesuai tanggal yang dipilih untuk ditampilkan di list bawah
     final selectedDayPlans = _controller.planners.where((p) {
       return p.dueDate.year == _selectedDay.year &&
-             p.dueDate.month == _selectedDay.month &&
-             p.dueDate.day == _selectedDay.day;
+          p.dueDate.month == _selectedDay.month &&
+          p.dueDate.day == _selectedDay.day;
     }).toList();
 
     return Scaffold(
@@ -315,7 +310,6 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
       ),
       body: Column(
         children: [
-          // --- KALENDER INTERAKTIF ---
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
@@ -342,7 +336,9 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
                 });
               },
               onPageChanged: (focusedDay) {
-                _focusedDay = focusedDay;
+                setState(() {
+                  _focusedDay = focusedDay;
+                });
               },
               calendarStyle: const CalendarStyle(
                 selectedDecoration: BoxDecoration(
@@ -355,7 +351,6 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
                 ),
                 todayTextStyle: TextStyle(color: Color(0xFF6C5CE7), fontWeight: FontWeight.bold),
               ),
-              // Memaksa titik penanda di kalender HANYA MUNCUL 1 BUAH saja
               calendarBuilders: CalendarBuilders(
                 markerBuilder: (context, day, events) {
                   if (events.isNotEmpty) {
@@ -382,8 +377,6 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
             ),
           ),
           const SizedBox(height: 10),
-
-          // --- DAFTAR PLAN SESUAI TANGGAL ---
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -445,10 +438,9 @@ class _StudyPlannerViewState extends State<StudyPlannerView> {
                                     Checkbox(
                                       value: plan.isCompleted,
                                       activeColor: const Color(0xFF8C72EC),
-                                      onChanged: (val) {
-                                        setState(() {
-                                          _controller.togglePlannerCompletion(plan.id);
-                                        });
+                                      onChanged: (val) async {
+                                        await _controller.togglePlannerCompletion(plan.id);
+                                        if (mounted) setState(() {});
                                       },
                                     ),
                                 ],
